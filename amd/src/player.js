@@ -60,6 +60,40 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
         audio.addEventListener('error', failed);
     });
 
+    const waitForFullBuffer = (audio, onProgress) => new Promise((resolve, reject) => {
+        const startedAt = Date.now();
+        const inspect = () => {
+            let covered = 0;
+            for (let index = 0; index < audio.buffered.length; index++) {
+                if (audio.buffered.start(index) <= covered + 0.25) {
+                    covered = Math.max(covered, audio.buffered.end(index));
+                }
+            }
+            const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+            onProgress(covered, duration);
+            if (duration > 0 && covered >= duration - 0.5) {
+                cleanup();
+                resolve();
+            } else if (Date.now() - startedAt > 600000) {
+                cleanup();
+                reject(new Error('Audio did not fully buffer within ten minutes'));
+            }
+        };
+        const failed = () => {
+            cleanup();
+            reject(new Error('Audio buffering failed'));
+        };
+        const cleanup = () => {
+            window.clearInterval(timer);
+            audio.removeEventListener('progress', inspect);
+            audio.removeEventListener('error', failed);
+        };
+        const timer = window.setInterval(inspect, 250);
+        audio.addEventListener('progress', inspect);
+        audio.addEventListener('error', failed);
+        inspect();
+    });
+
     const downloadAudio = async(url, onProgress) => {
         const response = await fetch(url, {credentials: 'same-origin', cache: 'force-cache'});
         if (!response.ok) {
@@ -137,22 +171,40 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
         if (!originalUrl) {
             throw new Error('Audio source is missing');
         }
-        const blob = await downloadAudio(originalUrl, (received, total) => {
-            if (total > 0) {
-                ui.load.value = Math.min(1, received / total);
-                ui.status.textContent = `Loading audio… ${Math.floor((received / total) * 100)}%`;
-            }
-        });
-        const objectUrl = URL.createObjectURL(blob);
-        audio.querySelectorAll('source').forEach((node) => node.remove());
-        audio.src = objectUrl;
-        audio.preload = 'auto';
-        audio.load();
-        await waitForMetadata(audio);
+        let objectUrl = null;
+        try {
+            const blob = await downloadAudio(originalUrl, (received, total) => {
+                if (total > 0) {
+                    ui.load.value = Math.min(1, received / total);
+                    ui.status.textContent = `Loading audio… ${Math.floor((received / total) * 100)}%`;
+                }
+            });
+            objectUrl = URL.createObjectURL(blob);
+            audio.querySelectorAll('source').forEach((node) => node.remove());
+            audio.src = objectUrl;
+            audio.preload = 'auto';
+            audio.load();
+            await waitForMetadata(audio);
+        } catch (fetchError) {
+            // Cross-origin media may be playable while its origin blocks Fetch.
+            // In that case keep the original source and require full buffered coverage.
+            audio.src = originalUrl;
+            audio.preload = 'auto';
+            audio.load();
+            await waitForMetadata(audio);
+            await waitForFullBuffer(audio, (covered, duration) => {
+                if (duration > 0) {
+                    ui.load.value = Math.min(1, covered / duration);
+                    ui.status.textContent = `Loading audio… ${Math.floor((covered / duration) * 100)}%`;
+                }
+            });
+        }
         const decodedDuration = Math.round(audio.duration * 1000);
         if (!Number.isFinite(decodedDuration) ||
                 Math.abs(decodedDuration - config.durationms) > DURATION_TOLERANCE_MS) {
-            URL.revokeObjectURL(objectUrl);
+            if (objectUrl) {
+                URL.revokeObjectURL(objectUrl);
+            }
             throw new Error('Decoded audio duration does not match configuration');
         }
 
@@ -320,7 +372,9 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
         });
         window.addEventListener('pagehide', () => {
             persistLocal(true);
-            URL.revokeObjectURL(objectUrl);
+            if (objectUrl) {
+                URL.revokeObjectURL(objectUrl);
+            }
         });
     };
 

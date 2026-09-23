@@ -47,11 +47,11 @@ Server checkpoint interval: 30
 
 Do not enable the plugin until the live Listening CMID and exact rendered HTML have been inspected and the HTML change has an exact private backup.
 
-## Media-origin release blocker
+## Media-origin preload behaviour
 
-The current `archive.najala.org` response supplies its content length and byte ranges but, when checked with the Moodle origin on 23 September 2026, did not include `Access-Control-Allow-Origin`. Browser JavaScript therefore cannot currently perform Teleport's verified full-file fetch from `https://ulb.center`.
+The current `archive.najala.org` response supplies its content length and byte ranges but, when checked with the Moodle origin on 23 September 2026, did not include `Access-Control-Allow-Origin`. Browser JavaScript therefore cannot perform Teleport's preferred full-file Fetch into an in-memory Blob from `https://ulb.center`.
 
-Before deployment, either allow `https://ulb.center` through CORS on the media origin or publish the immutable recording from another approved origin with equivalent caching and CORS. Teleport deliberately fails closed instead of falling back to partially buffered native playback. Do not proxy the 41.8 MB file through PHP.
+Teleport falls back to native media loading and keeps Play disabled until the browser reports continuous buffered coverage of the complete recording. It still fails closed on a partial buffer, decoding failure, duration mismatch, or ten-minute preload timeout. CORS for `https://ulb.center` remains preferable because a complete Blob is a stronger, simpler readiness guarantee. Do not proxy the 41.8 MB file through PHP.
 
 ## Build and validation
 
