@@ -1,0 +1,10 @@
+# Local tooling and sensitive operational material
+.DS_Store
+*~
+node_modules/
+vendor/
+.env
+.env.*
+private/
+artifacts/
+# Production compiled AMD files must remain tracked.
