@@ -16,7 +16,7 @@ The supplied authoring HTML contains one external MP3, four initially open colla
 - Audio loads silently inside the attempt and does not autoplay on first entry.
 - Candidate deliberately clicks Play to start the recording.
 - No candidate seeking, replay, speed control, or pause control; retain accessible volume adjustment.
-- Audio recovery is attempt-specific and aware of elapsed time and Moodle attempt status.
+- Returning must not skip unheard audio. Resume from saved playback progress; elapsed quiz time never advances the recording. Moodle attempt status/deadline still controls whether listening is allowed.
 - Shared hosting must not require a worker, media proxy through PHP, or constant polling.
 - Both question HTML and the plugin may change; Moodle core must remain untouched.
 - Connection failures, browser crashes, hangs, and unheard sound cannot all be reliably diagnosed automatically.
@@ -29,25 +29,31 @@ On entry: a compact audio card shows loading/readiness, Play, and volume. There 
 
 Recommended first-play gate: enable Play after the full recording has been obtained and validated as usable by the browser. Loading time consumes the existing quiz allowance under the chosen flow. Slow connections may therefore still need an invigilator remedy; this is a deliberate consequence to review, not a promise that preloading removes all timing risk.
 
-After Play: show Playing and volume controls. At completion show Recording finished. If the browser requires a gesture after re-entry, show Resume listening; compute the permitted offset at the time of that gesture, not when the page was initially loaded.
+After Play: show Playing and volume controls. At completion show Recording finished. If the browser requires a gesture after re-entry, show Resume listening; resume from the recovered playback checkpoint, without adding time spent away or loading.
 
 Proposed HTML contract: `.proelts-listening` wrapper, `.proelts-listening-audio` media element, and an accessible fallback message. Keep a stable media revision identifier validated against plugin configuration. No inline JavaScript or event handlers. The plugin supplies buttons and binds to these explicit markers only in configured eligible attempts. No native `controls` fallback in a controlled exam.
 
-## Timing and recovery: proposed policy, not yet approved
+## Timing and recovery: confirmed no-skip policy
 
-Recommended lightweight mode: an uninterrupted wall-clock timeline after the first Play.
+User decision: returning must not skip unheard audio. This supersedes the earlier wall-clock proposal.
 
-    permitted offset = clamp(server-adjusted current time - first-play timestamp, 0, recording duration)
+    resume position = last valid saved playback checkpoint
 
-Before first Play, no audio timestamp exists. Waiting consumes quiz time but does not advance the recording. Afterwards, leaving/reloading does not change the timestamp. Returning two minutes after leaving at 10:00 yields a permitted position of 12:00. Buffering or a sleeping computer can also create missed content under this policy.
+Leaving at approximately 10:00 and returning two minutes later resumes at approximately 10:00, not 12:00. Moodle's quiz timer continues independently. Buffering, recovery loading, and time away must not advance the saved audio position. If preloaded audio continues playing during a network outage, save its actual advancing position locally; loss of network alone does not mean playback stopped.
 
-This mode avoids needing to infer when the candidate left, but does not establish what they heard. The user has discussed this interpretation without yet approving its fairness consequences. Resume-from-last-position would instead preserve unheard content but would let deliberate exits act as pauses. Do not implement either choice as settled policy without resolving it.
+Use frequent inexpensive browser-local checkpoints of actual playback progress plus infrequent server checkpoints for device-loss recovery. Proposed starting intervals for the spike: local saves around once per second while playback advances, server saves at most once per 30 seconds while advancing, plus bounded significant-event saves. These are tuning targets, not approved recovery precision or guaranteed performance. Lifecycle saves are best effort and cannot be relied on after a crash.
 
-Use server timestamps as authority, with a browser monotonic clock between server contacts; do not trust the device wall clock or scrape the visible countdown. Check Moodle's effective attempt status/deadline through supported APIs. A time extension should not automatically rewind audio. Accommodation and supervised recovery rules must be explicit.
+No browser can prove what the student heard. After a crash, an older checkpoint may repeat a short segment. Prefer this conservative overlap to guessing forward and skipping content. After loss of both the device and its unsynced local records, the overlap can be longer, especially during an outage. Do not promise exact cross-device recovery or a fixed overlap bound while offline. If state is missing or conflicting, require supervised recovery rather than silently restarting or jumping forward.
 
-Playback ends when the authorized recording timeline ends or the attempt ceases to permit listening. Moodle alone enforces submission. Do not automatically add two minutes, shorten the generous allowance, or alter the recording in this release.
+Validate checkpoints against attempt/media identity, playback progression, revision and ordering. Never accept a client offset as unrestricted seek authority. Define local/server reconciliation, stale-write rejection, duplicate-tab/device ownership, and completion consistency in the spike. Browser reports remain advisory, not tamper-proof evidence.
 
-The first-play handshake must be tested: obtain server authorization and establish one start atomically, then begin playback promptly. Browser rejection or delayed startup must surface clearly. Do not expose a generic reset endpoint to repair failed starts; that would become replay. Define a narrowly controlled initialization-failure path during the technical spike.
+Read Moodle's effective attempt status/deadline through supported APIs, not the visible countdown. Timer awareness means respecting the attempt deadline, not using elapsed time to calculate audio position. A quiz time extension does not rewind audio. If the quiz expires before the recording finishes, normal Moodle rules still apply; the plugin does not grant extra time. Accommodation and supervised recovery rules remain to be defined.
+
+This policy prioritizes continuity: leaving can effectively interrupt audio, even though no Pause button is provided and quiz time continues. Record repeated interruptions for review; do not compensate by skipping content. No automated method can reliably distinguish deliberate exits from all genuine failures.
+
+Playback ends when the recording reaches its end or the attempt ceases to permit listening. Moodle alone enforces submission. Do not automatically add two minutes, shorten the generous allowance, or alter the recording in this release.
+
+The first-play handshake must be tested: obtain server authorization and establish one session atomically, then begin playback promptly. Browser rejection or delayed startup must surface clearly and must not fabricate playback progress. Retries retain the same session and valid checkpoint rather than resetting it.
 
 ## Moodle architecture
 
@@ -55,7 +61,7 @@ Provisional component: `local_proelts_teleport`, subject to the integration spik
 
 - Supported output hooks load compiled AMD JavaScript and CSS only for configured Listening attempts.
 - Authenticated Moodle external/AJAX functions validate session protection, attempt ownership, context/capabilities, eligible state, and configured media.
-- One plugin-owned session record per attempt/media revision: unique identity, server first-play timestamp, and minimal recovery metadata. Atomic uniqueness makes repeated Play requests idempotent.
+- One plugin-owned session record per attempt/media revision: unique identity, server first-play timestamp for audit, latest accepted playback checkpoint, completion state, revision/ordering fields, and minimal recovery metadata. Atomic uniqueness makes repeated Play requests idempotent.
 - Media duration and revision are administrator-controlled configuration, not trusted client values.
 - Plugin-owned sparse incident records contain event type, server receipt time, and bounded technical details. Client-reported timestamps/positions are advisory evidence, not proof.
 - Implement Moodle privacy support and appropriate deletion/retention behaviour for attempt-linked records. Never copy candidate answers into Teleport records.
@@ -70,7 +76,7 @@ A companion `quizaccess` plugin may be needed if supported local-plugin hooks ca
 
 If cross-origin fetch is unavailable, choose a supported media-origin configuration or delivery location before implementation. Do not proxy the full MP3 through a new PHP endpoint on shared hosting. If only native buffering is possible, describe its weaker guarantees honestly rather than labelling partial buffering as fully ready.
 
-An in-memory Blob can protect current-page playback from a later network interruption but is lost on page destruction. Browser cache reuse on reload is not guaranteed. Persistent offline storage/service workers are outside initial scope unless the spike proves necessary. On re-entry, loading may consume time and the permitted offset is recalculated when playback can resume.
+An in-memory Blob can protect current-page playback from a later network interruption but is lost on page destruction. Browser cache reuse on reload is not guaranteed. Persistent offline storage/service workers are outside initial scope unless the spike proves necessary. On re-entry, loading may consume quiz time, but does not advance the recovered playback position.
 
 ## Resource budget and operational behaviour
 
@@ -78,12 +84,12 @@ Design targets, to verify under representative concurrency:
 
 - One state read per page load, preferably supplied in the page bootstrap.
 - One atomic first-play write per attempt; retries are idempotent.
-- No per-second requests, playback-position database writes, cron job, or dedicated service.
+- No per-second server requests, continuous polling, cron job, or dedicated service. Infrequent checkpoint writes replace the original start-write-only proposal. At a 30-second interval, 100 active candidates average about 3.3 checkpoint requests/second; jitter and load-test these writes before accepting the budget on shared hosting.
 - Local event handling for seek/rate changes and playback stalls; low-frequency checks only where events are insufficient.
 - Sparse, deduplicated incident writes with request/payload limits; one optional completion event.
 - Audio bytes travel directly from the media origin to browsers.
 
-Local progress checkpoints may help diagnose incidents but are neither authoritative nor guaranteed to survive computer loss. Duplicate tabs must share the server start; test local tab coordination to prevent accidental simultaneous sound where the client supports it. Preventing simultaneous playback across different devices is not guaranteed by a timestamp alone; existing exam access/session policy and SEB remain relevant.
+Local checkpoints support same-browser recovery; server checkpoints provide a conservative fallback after device loss. Neither proves that sound was heard. Duplicate tabs/devices must not race to overwrite progress; prototype session ownership and versioned writes, and test local coordination where supported. Existing exam access/session policy and SEB remain relevant.
 
 Browser-side playback guards discourage ordinary misuse but are not DRM. Do not claim that hiding controls prevents extraction of media delivered to a browser.
 
@@ -101,13 +107,13 @@ Estimates are engineering effort for one implementer after access is available, 
 
 | Milestone | Deliverable and acceptance gate | Effort |
 | --- | --- | --- |
-| 1. Inspect and resolve policy | Listening identifiers/settings, rendered player, media duration/origin behaviour, target SEB versions, agreed recovery and loading policy | 0.5–1 day |
-| 2. Compatibility and preload spike | Prove hooks, first-play handshake, media loading, timing persistence, access-gate approach on a non-production fixture | 1–2 days |
-| 3. Core plugin | Scoped player, atomic session state, timing recovery, volume/accessibility, own schema/privacy support, compiled build | 2–3 days |
+| 1. Inspect and resolve policy | Listening identifiers/settings, rendered player, media duration/origin behaviour, target SEB versions, no-skip recovery precision and loading policy | 0.5–1 day |
+| 2. Compatibility and preload spike | Prove hooks, first-play handshake, media loading, checkpoint persistence/reconciliation, access-gate approach on a non-production fixture | 1–2 days |
+| 3. Core plugin | Scoped player, atomic session state, checkpoint recovery, volume/accessibility, own schema/privacy support, compiled build | 2–3 days |
 | 4. Hardening and validation | Automated behavioural tests, network/reload cases, realistic concurrency, actual Windows SEB pilot, defect fixes | 1.5–2.5 days |
 | 5. Release preparation and pilot | Installable package, operator guide, HTML patch/backup, rollback rehearsal, authorized deployment and evidence | 0.5–1 day |
 
-Expected total: **5.5–9.5 engineering days (roughly 44–76 hours)**. A demonstrable prototype may be available after milestones 1–2; it is not exam-ready. A companion access plugin, persistent offline media, or a full invigilator recovery console could add approximately 1–3 days each and should be separately scoped. Re-estimate after the spike.
+Expected total: **5.5–9.5 engineering days (roughly 44–76 hours)**. A demonstrable prototype may be available after milestones 1–2; it is not exam-ready. A companion access plugin, persistent offline media, or a full invigilator recovery console could add approximately 1–3 days each and should be separately scoped. This range is provisional after the no-skip decision: checkpoint reconciliation and device-loss testing replace the simpler timestamp-only design. Re-estimate after the spike, including the measured server write load.
 
 ## Verification gates
 
@@ -115,6 +121,8 @@ Expected total: **5.5–9.5 engineering days (roughly 44–76 hours)**. A demons
 - Initial entry never autoplays; first Play is idempotent across retries/tabs.
 - Mouse/keyboard/media controls cannot provide ordinary pause/seek/rate bypasses in supported clients.
 - Reload, page navigation, sleep/wake, expired login, failed initial Play, media stall, and disconnected return follow the agreed policy.
+- Return after two minutes away does not add two minutes to the audio offset; buffering and recovery loading likewise never advance it.
+- Crash, missing local state, out-of-order writes, duplicate devices, and offline playback use conservative recovery without inferred forward jumps.
 - Completed media cannot restart; expired/submitted attempts cannot gain listening access.
 - Quiz time extensions and accommodations have documented audio behaviour.
 - HTML edits preserve every Cloze token and grading definition exactly.
@@ -126,7 +134,7 @@ Expected total: **5.5–9.5 engineering days (roughly 44–76 hours)**. A demons
 
 ## Decisions required before implementation
 
-1. Approve uninterrupted elapsed-time recovery, or choose a different interruption policy.
+1. Tune checkpoint intervals and define acceptable conservative replay after lost state; the no-skip recovery policy is confirmed.
 2. Approve complete preload before Play inside the already running quiz, including its loading-time consequence.
 3. Define the invigilator remedy for genuine failures, including whether audio continuation/replay or Moodle time adjustment is permitted and who may authorize it.
 4. Identify target Listening quizzes and actual SEB clients; inspect their current state before selecting integration points.

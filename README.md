@@ -4,7 +4,7 @@ An independent Moodle plugin project for controlled Listening playback in ProELT
 
 Status: **planning only — no plugin implementation or production deployment**.
 
-Candidates enter the quiz normally, preload audio silently, and click Play to begin. Moodle retains ownership of the quiz timer, answers, autosave, grading, and submission. Teleport provides audio controls and attempt-specific playback state without changing Moodle core.
+Candidates enter the quiz normally, preload audio silently, and click Play to begin. Moodle retains ownership of the quiz timer, answers, autosave, grading, and submission. Teleport provides audio controls and attempt-specific playback state without changing Moodle core. Returning resumes from saved playback progress without skipping unheard audio; the Moodle timer continues independently. Conservative checkpoint recovery may repeat a short segment after a failure.
 
 Read [PLAN.md](PLAN.md) for design, delivery milestones, estimates, risks, and decisions still required. Read [AGENTS.md](AGENTS.md) before making changes.
 
