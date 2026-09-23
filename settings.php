@@ -27,6 +27,13 @@ if ($hassiteconfig) {
         '.proelts-listening',
         PARAM_TEXT
     ));
+    $settings->add(new admin_setting_configtextarea(
+        'local_proelts_teleport/mediaconfig',
+        get_string('mediaconfig', 'local_proelts_teleport'),
+        get_string('mediaconfig_desc', 'local_proelts_teleport'),
+        '',
+        PARAM_RAW_TRIMMED
+    ));
     $settings->add(new admin_setting_configtext(
         'local_proelts_teleport/checkpointseconds',
         get_string('checkpointseconds', 'local_proelts_teleport'),
