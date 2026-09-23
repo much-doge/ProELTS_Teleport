@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Teleport player browser test</title></head>
+<body>
+<div class="proelts-listening" data-proelts-media-id="fixture-v1">
+  <audio class="proelts-listening-audio"></audio>
+</div>
+<pre id="result">RUNNING</pre>
+<script>
+(() => {
+    const result = document.getElementById('result');
+    const calls = [];
+    let playerModule;
+
+    // Headless Chromium has no audio output device. Simulate successful media
+    // progression after the browser has performed the real fetch and metadata decode.
+    HTMLMediaElement.prototype.play = function() {
+        const media = this;
+        window.setTimeout(() => media.dispatchEvent(new Event('timeupdate')), 50);
+        window.setTimeout(() => media.dispatchEvent(new Event('ended')), 100);
+        return Promise.resolve();
+    };
+
+    const wav = (seconds) => {
+        const rate = 8000;
+        const samples = rate * seconds;
+        const buffer = new ArrayBuffer(44 + samples * 2);
+        const view = new DataView(buffer);
+        const write = (offset, value) => [...value].forEach((char, i) => view.setUint8(offset + i, char.charCodeAt(0)));
+        write(0, 'RIFF'); view.setUint32(4, 36 + samples * 2, true); write(8, 'WAVE');
+        write(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+        view.setUint16(22, 1, true); view.setUint32(24, rate, true); view.setUint32(28, rate * 2, true);
+        view.setUint16(32, 2, true); view.setUint16(34, 16, true); write(36, 'data');
+        view.setUint32(40, samples * 2, true);
+        return new Blob([buffer], {type: 'audio/wav'});
+    };
+
+    document.querySelector('audio').src = URL.createObjectURL(wav(2));
+    window.define = (dependencies, factory) => {
+        const ajax = {call: ([request]) => {
+            calls.push(request);
+            if (request.methodname.endsWith('_start')) {
+                return [Promise.resolve({positionms: 0, sequence: 0, durationms: 2000, completed: false})];
+            }
+            return [Promise.resolve({
+                positionms: request.args.positionms,
+                sequence: request.args.sequence,
+                completed: request.args.completed,
+            })];
+        }};
+        playerModule = factory(ajax, {exception: (error) => { throw error; }});
+    };
+
+    const script = document.createElement('script');
+    script.src = '../amd/src/player.js';
+    script.onload = () => {
+        playerModule.init({
+            attemptid: 7,
+            cmid: 9,
+            selector: '.proelts-listening',
+            mediaid: 'fixture-v1',
+            durationms: 2000,
+            checkpointseconds: 10,
+        });
+        const started = performance.now();
+        const poll = window.setInterval(() => {
+            const button = document.querySelector('.proelts-teleport-play');
+            const status = document.querySelector('.proelts-teleport-status');
+            if (button && !button.disabled && !button.hidden && status.textContent === 'Audio ready') {
+                button.click();
+            }
+            if (status && status.textContent === 'Recording finished') {
+                window.clearInterval(poll);
+                const audio = document.querySelector('audio');
+                const startCalls = calls.filter((call) => call.methodname.endsWith('_start'));
+                const completedCalls = calls.filter((call) => call.methodname.endsWith('_checkpoint') && call.args.completed);
+                const passed = !audio.hasAttribute('controls') && startCalls.length === 1 && completedCalls.length === 1;
+                result.textContent = passed ? 'PASS' : 'FAIL: call or controls invariant';
+            } else if (performance.now() - started > 10000) {
+                window.clearInterval(poll);
+                result.textContent = 'FAIL: timeout; ' + (status ? status.textContent : 'no status');
+            }
+        }, 50);
+    };
+    document.head.appendChild(script);
+})();
+</script>
+</body>
+</html>
