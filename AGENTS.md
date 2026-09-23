@@ -1,6 +1,6 @@
 # Project rules
 
-- Current authorization is planning and repository setup only. Do not implement or deploy until requested.
+- Implementation is authorized. Production deployment remains a separate release step.
 - Keep Moodle upgradeable: no core edits, theme patches, sanitizer bypasses, or inline executable question HTML.
 - Use supported Moodle plugin APIs. Inspect the exact deployed version and rendered player before selecting integration points.
 - Moodle owns attempt timing, responses, autosave, grading, and submission. Do not write directly to those core records.

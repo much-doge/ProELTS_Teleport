@@ -1,0 +1,19 @@
+name: Moodle plugin checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+      - run: find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
+      - run: node --check amd/src/player.js
