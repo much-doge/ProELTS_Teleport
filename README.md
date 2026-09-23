@@ -9,3 +9,5 @@ Candidates enter the quiz normally, preload audio silently, and click Play to be
 Read [PLAN.md](PLAN.md) for design, delivery milestones, estimates, risks, and decisions still required. Read [AGENTS.md](AGENTS.md) before making changes.
 
 This is a bounded development project. ProELTS Workflows remains the operational coordination repository; MDL_Practice remains the package/source cabinet, and ProELTS Glow remains the Reading highlighter project. This plan does not move or modify those repositories.
+
+See [RESEARCH.md](RESEARCH.md) for the review of existing players, source findings, and reuse assessment.
