@@ -41,3 +41,25 @@ This append-only log excludes credentials, participant information, answer conte
 ### Remaining release gates
 
 Deployment and server-side production checks are complete. No candidate attempt was created during deployment. The end-to-end candidate flow, interruption recovery on the live site, shared-host load under concurrency, and the actual Windows SEB clients remain unverified. Do not describe the alpha as exam-ready until those gates pass.
+
+## 24 September 2026 — VideoJS lifecycle correction
+
+### Incident and mitigation
+
+- A live test exposed VideoJS's `The element or ID supplied is not valid` error before controlled playback began.
+- Teleport was disabled immediately and Moodle caches were purged. The question markup remained patched and valid; no Teleport session row had been created.
+- Inspection of Moodle 5.0.3's deployed `media_videojs/loader` showed that Moodle initializes the generated audio player asynchronously. Teleport 0.1.1 removed the authored element before that initializer used its generated ID.
+- Teleport 0.1.2 waits for Moodle to register the VideoJS player, disposes it through VideoJS's supported lifecycle, and only then replaces the generated wrapper with the controlled audio element.
+
+### Validation and deployment
+
+- Added a browser regression that delays VideoJS registration and fails unless Teleport waits, disposes the player, removes the wrapper, completes controlled playback, and records completion. The regression passed in headless Chromium.
+- Release ZIP SHA-256: `dcbcc7eb3cf48a4e34eb0bab2da5ad984cea1b92e11b2345f11544839826f289`.
+- Production AMD asset SHA-256 matched the tested local build: `0d3aa0b347265ca48078a536db0d0a6281d246b66e03ed49d9221d4f094c6774`.
+- Production PHP lint passed for every packaged PHP file.
+- Deployment waited until the reported test attempt was closed and the active-attempt count was zero.
+- Moodle upgraded successfully to plugin version `2026092401`; a second upgrade check reported no upgrade required.
+- The production asset returned HTTP 200. Post-activation audit showed enabled state `1`, CMID allowlist `115`, two registered AJAX functions, zero active attempts, zero Teleport session rows, and all 40 Cloze tokens intact.
+- The superseded 0.1.1 plugin directory is stored outside the web root at `/home/ulbcedxs/.proelts_teleport_backup_20260924_v011`.
+
+The server-side defect is corrected and deployed. A fresh authenticated candidate attempt is still required to verify the complete live browser flow; actual Windows SEB validation remains a separate release gate.
