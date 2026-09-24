@@ -141,11 +141,25 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
     };
 
     const initialisePlayer = async(config, wrapper) => {
-        const audio = wrapper.querySelector('audio.proelts-listening-audio');
+        const authoredAudio = wrapper.querySelector('audio.proelts-listening-audio');
         const authoredMediaId = wrapper.dataset.proeltsMediaId || '';
-        if (!audio || authoredMediaId !== config.mediaid) {
+        if (!authoredAudio || (authoredMediaId && authoredMediaId !== config.mediaid)) {
             throw new Error('Controlled audio marker or media revision does not match configuration');
         }
+
+        const originalUrl = sourceUrl(authoredAudio);
+        if (!originalUrl) {
+            throw new Error('Audio source is missing');
+        }
+        // Moodle's media filter may preserve our audio class while wrapping it in
+        // VideoJS controls. Use a fresh media element and remove that generated UI.
+        const audio = document.createElement('audio');
+        audio.className = 'proelts-listening-audio';
+        wrapper.querySelectorAll('.mediaplugin').forEach((node) => node.remove());
+        if (authoredAudio.isConnected) {
+            authoredAudio.remove();
+        }
+        wrapper.prepend(audio);
 
         audio.controls = false;
         audio.removeAttribute('controls');
@@ -167,10 +181,6 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
             }
         }
 
-        const originalUrl = sourceUrl(audio);
-        if (!originalUrl) {
-            throw new Error('Audio source is missing');
-        }
         let objectUrl = null;
         try {
             const blob = await downloadAudio(originalUrl, (received, total) => {

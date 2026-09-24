@@ -4,7 +4,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_proelts_teleport';
-$plugin->version = 2026092300;
+$plugin->version = 2026092400;
 $plugin->requires = 2025041400;
 $plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '0.1.0-alpha';
+$plugin->release = '0.1.1-alpha';

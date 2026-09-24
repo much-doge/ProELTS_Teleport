@@ -2,8 +2,11 @@
 <html lang="en">
 <head><meta charset="utf-8"><title>Teleport player browser test</title></head>
 <body>
-<div class="proelts-listening" data-proelts-media-id="fixture-v1">
-  <audio class="proelts-listening-audio"></audio>
+<div class="proelts-listening">
+  <div class="mediaplugin mediaplugin_videojs">
+    <audio class="proelts-listening-audio"></audio>
+    <div class="video-js">Generated native player controls</div>
+  </div>
 </div>
 <pre id="result">RUNNING</pre>
 <script>
@@ -74,7 +77,8 @@
                 const audio = document.querySelector('audio');
                 const startCalls = calls.filter((call) => call.methodname.endsWith('_start'));
                 const completedCalls = calls.filter((call) => call.methodname.endsWith('_checkpoint') && call.args.completed);
-                const passed = !audio.hasAttribute('controls') && startCalls.length === 1 && completedCalls.length === 1;
+                const passed = !audio.hasAttribute('controls') && !document.querySelector('.mediaplugin') &&
+                    startCalls.length === 1 && completedCalls.length === 1;
                 result.textContent = passed ? 'PASS' : 'FAIL: call or controls invariant';
             } else if (performance.now() - started > 10000) {
                 window.clearInterval(poll);

@@ -32,7 +32,7 @@ Replace the current native-control wrapper with ordinary, non-executable markup.
 </div>
 ```
 
-Do not include `controls`, inline JavaScript, or event handlers. The explicit class and media revision are the stable contract between authored question HTML and the plugin.
+Do not include `controls`, inline JavaScript, or event handlers. The explicit classes are the stable authoring contract. Moodle may strip the `data-proelts-media-id` attribute while cleaning content; Teleport therefore treats the administrator's CMID media definition as authoritative. If the attribute survives, it must match. Teleport removes Moodle's generated media-player wrapper before creating its controlled interface.
 
 ## Configuration for the supplied recording
 
