@@ -4,7 +4,7 @@
 <body>
 <div class="proelts-listening">
   <div class="mediaplugin mediaplugin_videojs">
-    <audio class="proelts-listening-audio"></audio>
+    <audio id="id_videojs_delayed_0" class="proelts-listening-audio"></audio>
     <div class="video-js">Generated native player controls</div>
   </div>
 </div>
@@ -14,6 +14,7 @@
     const result = document.getElementById('result');
     const calls = [];
     let playerModule;
+    let disposed = false;
 
     // Headless Chromium has no audio output device. Simulate successful media
     // progression after the browser has performed the real fetch and metadata decode.
@@ -39,6 +40,17 @@
     };
 
     document.querySelector('audio').src = URL.createObjectURL(wav(2));
+    const players = {};
+    const videojs = {getPlayer: (id) => players[id] || null};
+    window.setTimeout(() => {
+        players.id_videojs_delayed_0 = {
+            dispose: () => {
+                disposed = true;
+                delete players.id_videojs_delayed_0;
+            },
+        };
+    }, 150);
+
     window.define = (dependencies, factory) => {
         const ajax = {call: ([request]) => {
             calls.push(request);
@@ -51,7 +63,7 @@
                 completed: request.args.completed,
             })];
         }};
-        playerModule = factory(ajax, {exception: (error) => { throw error; }});
+        playerModule = factory(ajax, {exception: (error) => { throw error; }}, videojs);
     };
 
     const script = document.createElement('script');
@@ -77,7 +89,7 @@
                 const audio = document.querySelector('audio');
                 const startCalls = calls.filter((call) => call.methodname.endsWith('_start'));
                 const completedCalls = calls.filter((call) => call.methodname.endsWith('_checkpoint') && call.args.completed);
-                const passed = !audio.hasAttribute('controls') && !document.querySelector('.mediaplugin') &&
+                const passed = disposed && !audio.hasAttribute('controls') && !document.querySelector('.mediaplugin') &&
                     startCalls.length === 1 && completedCalls.length === 1;
                 result.textContent = passed ? 'PASS' : 'FAIL: call or controls invariant';
             } else if (performance.now() - started > 10000) {

@@ -5,7 +5,7 @@
  *
  * @module local_proelts_teleport/player
  */
-define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
+define(['core/ajax', 'core/notification', 'media_videojs/video-lazy'], function(Ajax, Notification, VideoJS) {
     const LOCAL_SAVE_INTERVAL_MS = 1000;
     const DURATION_TOLERANCE_MS = 2500;
 
@@ -38,6 +38,32 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
         const source = audio.querySelector('source');
         return source ? source.src : audio.src;
     };
+
+    const releaseMoodlePlayer = (audio) => new Promise((resolve, reject) => {
+        const mediaWrapper = audio.closest('.mediaplugin_videojs');
+        if (!mediaWrapper) {
+            resolve();
+            return;
+        }
+        const id = audio.id;
+        if (!id || !VideoJS || typeof VideoJS.getPlayer !== 'function') {
+            reject(new Error('Moodle media player cannot be identified'));
+            return;
+        }
+        const startedAt = Date.now();
+        const inspect = () => {
+            const player = VideoJS.getPlayer(id);
+            if (player) {
+                player.dispose();
+                resolve();
+            } else if (Date.now() - startedAt > 15000) {
+                reject(new Error('Moodle media player did not initialize'));
+            } else {
+                window.setTimeout(inspect, 50);
+            }
+        };
+        inspect();
+    });
 
     const waitForMetadata = (audio) => new Promise((resolve, reject) => {
         if (audio.readyState >= HTMLMediaElement.HAVE_METADATA) {
@@ -151,8 +177,11 @@ define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
         if (!originalUrl) {
             throw new Error('Audio source is missing');
         }
-        // Moodle's media filter may preserve our audio class while wrapping it in
-        // VideoJS controls. Use a fresh media element and remove that generated UI.
+        // Moodle initializes VideoJS asynchronously. Keep the authored element in
+        // place until its registered player exists, then dispose it before replacing
+        // the generated UI. Removing the element earlier makes Moodle call VideoJS
+        // with a stale id and produces an uncaught invalid-element error.
+        await releaseMoodlePlayer(authoredAudio);
         const audio = document.createElement('audio');
         audio.className = 'proelts-listening-audio';
         wrapper.querySelectorAll('.mediaplugin').forEach((node) => node.remove());
