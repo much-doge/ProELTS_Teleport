@@ -2,7 +2,7 @@
 
 An independent Moodle plugin project for controlled Listening playback in ProELTS quizzes.
 
-Status: **0.1.2-alpha disabled after a page-load regression; 0.1.3-alpha correction in development**.
+Status: **0.1.3-alpha deployed to CMID 115 and server-verified; candidate-flow and Windows SEB verification pending**.
 
 Candidates enter the quiz normally, preload audio silently, and click Play to begin. Moodle retains ownership of the quiz timer, answers, autosave, grading, and submission. Teleport provides audio controls and attempt-specific playback state without changing Moodle core. Returning resumes from saved playback progress without skipping unheard audio; the Moodle timer continues independently. Conservative checkpoint recovery may repeat a short segment after a failure.
 

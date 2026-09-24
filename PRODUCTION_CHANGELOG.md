@@ -63,3 +63,24 @@ Deployment and server-side production checks are complete. No candidate attempt 
 - The superseded 0.1.1 plugin directory is stored outside the web root at `/home/ulbcedxs/.proelts_teleport_backup_20260924_v011`.
 
 The server-side defect is corrected and deployed. A fresh authenticated candidate attempt is still required to verify the complete live browser flow; actual Windows SEB validation remains a separate release gate.
+
+## 24 September 2026 — Deferred preload and bounded readiness
+
+### Incident and mitigation
+
+- Live testing reported that the entire quiz page was barely loading and that audio readiness took too long.
+- Teleport was disabled immediately. With zero active attempts, the authored audio hint was changed from `preload="auto"` to `preload="none"`; all 40 Cloze tokens were preserved.
+- The eager authored hint allowed Moodle VideoJS to start pulling the 41.8 MB recording during page construction, before Teleport owned the element. The native fallback also required the complete 29-minute recording before enabling Play.
+
+### Correction and deployment
+
+- Teleport 0.1.3 leaves the authored element unloaded during Moodle's initial render. After Moodle VideoJS is registered and disposed, Teleport creates its fresh controlled element with `preload="auto"`.
+- On the production native-buffer fallback, Play becomes ready after three minutes of continuous audio are buffered. The rest continues loading during playback. The full-Blob path remains available if the media origin later permits cross-origin Fetch.
+- The cross-origin fallback, delayed VideoJS lifecycle, controlled playback, and completion checkpoint passed in headless Chromium.
+- Release ZIP SHA-256: `3f5a76a44cdf9edfa79ba3ea746c47af41417db7255a180124670ad0d5d0aa71`.
+- Production AMD asset SHA-256 matched the tested local build: `2b797f5cdb1d955e06977dcad077b994d9d2896ec0b19e5d35a50085f43f803f`.
+- Production PHP lint passed for every packaged PHP file. Moodle upgraded to plugin version `2026092402`, the asset returned HTTP 200, and a second upgrade check reported no upgrade required.
+- Post-activation audit showed enabled state `1`, CMID allowlist `115`, zero active attempts, zero Teleport session rows, two registered AJAX functions, and 40 preserved Cloze tokens.
+- The superseded 0.1.2 plugin directory is stored outside the web root at `/home/ulbcedxs/.proelts_teleport_backup_20260924_v012`.
+
+The initial page no longer requests the complete recording through the authored Moodle player. A fresh authenticated attempt is still required to measure the candidate-visible page load and time to the three-minute readiness cushion on representative connections.
