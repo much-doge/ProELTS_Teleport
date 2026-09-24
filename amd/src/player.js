@@ -8,6 +8,7 @@
 define(['core/ajax', 'core/notification', 'media_videojs/video-lazy'], function(Ajax, Notification, VideoJS) {
     const LOCAL_SAVE_INTERVAL_MS = 1000;
     const DURATION_TOLERANCE_MS = 2500;
+    const MIN_BUFFER_AHEAD_SECONDS = 180;
 
     const text = {
         loading: 'Loading audio…',
@@ -86,7 +87,7 @@ define(['core/ajax', 'core/notification', 'media_videojs/video-lazy'], function(
         audio.addEventListener('error', failed);
     });
 
-    const waitForFullBuffer = (audio, onProgress) => new Promise((resolve, reject) => {
+    const waitForBufferCushion = (audio, onProgress) => new Promise((resolve, reject) => {
         const startedAt = Date.now();
         const inspect = () => {
             let covered = 0;
@@ -96,13 +97,14 @@ define(['core/ajax', 'core/notification', 'media_videojs/video-lazy'], function(
                 }
             }
             const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
-            onProgress(covered, duration);
-            if (duration > 0 && covered >= duration - 0.5) {
+            const target = Math.min(duration, MIN_BUFFER_AHEAD_SECONDS);
+            onProgress(covered, duration, target);
+            if (target > 0 && covered >= target - 0.5) {
                 cleanup();
                 resolve();
             } else if (Date.now() - startedAt > 600000) {
                 cleanup();
-                reject(new Error('Audio did not fully buffer within ten minutes'));
+                reject(new Error('Audio did not prepare the playback cushion within ten minutes'));
             }
         };
         const failed = () => {
@@ -231,10 +233,10 @@ define(['core/ajax', 'core/notification', 'media_videojs/video-lazy'], function(
             audio.preload = 'auto';
             audio.load();
             await waitForMetadata(audio);
-            await waitForFullBuffer(audio, (covered, duration) => {
-                if (duration > 0) {
-                    ui.load.value = Math.min(1, covered / duration);
-                    ui.status.textContent = `Loading audio… ${Math.floor((covered / duration) * 100)}%`;
+            await waitForBufferCushion(audio, (covered, duration, target) => {
+                if (duration > 0 && target > 0) {
+                    ui.load.value = Math.min(1, covered / target);
+                    ui.status.textContent = `Preparing audio… ${Math.floor((covered / target) * 100)}%`;
                 }
             });
         }

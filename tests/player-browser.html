@@ -4,7 +4,7 @@
 <body>
 <div class="proelts-listening">
   <div class="mediaplugin mediaplugin_videojs">
-    <audio id="id_videojs_delayed_0" class="proelts-listening-audio"></audio>
+    <audio id="id_videojs_delayed_0" class="proelts-listening-audio" preload="none"></audio>
     <div class="video-js">Generated native player controls</div>
   </div>
 </div>
@@ -40,6 +40,7 @@
     };
 
     document.querySelector('audio').src = URL.createObjectURL(wav(2));
+    window.fetch = () => Promise.reject(new TypeError('Simulated cross-origin fetch block'));
     const players = {};
     const videojs = {getPlayer: (id) => players[id] || null};
     window.setTimeout(() => {
