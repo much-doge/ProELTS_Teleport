@@ -1,7 +1,7 @@
 # ProELTS Teleport — design and delivery plan
 
-Date: 23 September 2026
-Status: proposal; planning only
+Date: 23 September 2026; deployment record updated 24 September 2026
+Status: 0.1.1-alpha implemented and deployed to CMID 115; live candidate-flow and Windows SEB validation pending
 
 ## Outcome and scope
 
