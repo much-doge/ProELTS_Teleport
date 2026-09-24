@@ -2,7 +2,7 @@
 
 An independent Moodle plugin project for controlled Listening playback in ProELTS quizzes.
 
-Status: **0.1.3-alpha deployed to CMID 115 and server-verified; candidate-flow and Windows SEB verification pending**.
+Status: **0.1.3-alpha disabled after its native buffer gate deadlocked; 0.1.4-alpha correction in development**.
 
 Candidates enter the quiz normally, preload audio silently, and click Play to begin. Moodle retains ownership of the quiz timer, answers, autosave, grading, and submission. Teleport provides audio controls and attempt-specific playback state without changing Moodle core. Returning resumes from saved playback progress without skipping unheard audio; the Moodle timer continues independently. Conservative checkpoint recovery may repeat a short segment after a failure.
 
@@ -16,7 +16,7 @@ See [RESEARCH.md](RESEARCH.md) for the review of existing players, source findin
 
 ## Current alpha behaviour
 
-Teleport activates only for an enabled, allowlisted live quiz attempt owned by the current user. Moodle renders the authored element with `preload="none"`; after the page is ready, Teleport creates its controlled element with `preload="auto"`. It validates the decoded duration and enables Play after three minutes of continuous audio are buffered while the remainder keeps loading in the background. It replaces native controls with Play and volume, fixes playback at normal speed, prevents ordinary seeking and pausing, and saves no-skip recovery checkpoints locally and to one plugin-owned Moodle row per attempt.
+Teleport activates only for an enabled, allowlisted live quiz attempt owned by the current user. Moodle renders the authored element with `preload="none"`; after the page is ready, Teleport creates its controlled element with `preload="auto"`. It validates the decoded duration and enables Play after a short 15-second playable cushion while the remainder keeps loading in the background. It replaces native controls with Play and volume, fixes playback at normal speed, prevents ordinary seeking and pausing, and saves no-skip recovery checkpoints locally and to one plugin-owned Moodle row per attempt.
 
 Moodle remains responsible for the attempt timer, answers, autosave, grading, and submission. Waiting for audio readiness and time spent away continue to consume Moodle quiz time. Returning resumes from the greatest valid saved playback position; elapsed time away never advances the audio.
 
@@ -53,7 +53,7 @@ Do not enable the plugin until the live Listening CMID and exact rendered HTML h
 
 The current `archive.najala.org` response supplies its content length and byte ranges but, when checked with the Moodle origin on 23 September 2026, did not include `Access-Control-Allow-Origin`. Browser JavaScript therefore cannot perform Teleport's preferred full-file Fetch into an in-memory Blob from `https://ulb.center`.
 
-Teleport falls back to native media loading and keeps Play disabled until the browser reports at least three minutes of continuous buffered coverage. The browser continues loading the remainder during playback. Teleport still fails closed if that initial cushion is unavailable, decoding fails, the duration mismatches, or the ten-minute preparation timeout expires. CORS for `https://ulb.center` remains preferable because a complete Blob is a stronger readiness guarantee. Do not proxy the 41.8 MB file through PHP.
+Teleport falls back to native media loading and keeps Play disabled until the browser reports a 15-second playable cushion. Browsers commonly stop speculative buffering while paused, so this gate must remain small; the browser continues loading during playback. Teleport still fails closed if the initial cushion is unavailable, decoding fails, the duration mismatches, or the ten-minute preparation timeout expires. CORS for `https://ulb.center` remains preferable because a complete Blob is a stronger, simpler readiness guarantee. Do not proxy the 41.8 MB file through PHP.
 
 ## Build and validation
 

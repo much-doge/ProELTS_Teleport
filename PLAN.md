@@ -1,7 +1,7 @@
 # ProELTS Teleport — design and delivery plan
 
 Date: 23 September 2026; deployment record updated 24 September 2026
-Status: 0.1.3-alpha implemented and deployed to CMID 115; live candidate-flow and Windows SEB validation pending
+Status: 0.1.3-alpha disabled after its native buffer gate deadlocked; 0.1.4-alpha correction in development
 
 ## Outcome and scope
 
@@ -27,7 +27,7 @@ The earlier proposal to require a headphone check before the attempt and coordin
 
 On entry: a compact audio card shows loading/readiness, Play, and volume. There is no seekable timeline. A static status or elapsed-time label may be shown without making it interactive. The questions retain their present layout.
 
-First-play gate after the 24 September page-load correction: render the authored element with `preload="none"`, then let Teleport start native `preload="auto"` only after it has disposed Moodle's generated player. Enable Play after three minutes of continuous audio are buffered and keep loading the remainder during playback. Loading time consumes the existing quiz allowance under the chosen flow. Slow connections may therefore still need an invigilator remedy; buffering cannot remove all timing risk.
+First-play gate after live browser correction on 24 September: render the authored element with `preload="none"`, then let Teleport start native `preload="auto"` only after it has disposed Moodle's generated player. Enable Play after a 15-second playable cushion and keep loading during playback. A large paused-buffer requirement can deadlock because browsers may stop speculative buffering until playback begins. Loading time consumes the existing quiz allowance under the chosen flow; slow connections may still need an invigilator remedy.
 
 After Play: show Playing and volume controls. At completion show Recording finished. If the browser requires a gesture after re-entry, show Resume listening; resume from the recovered playback checkpoint, without adding time spent away or loading.
 
@@ -72,7 +72,7 @@ A companion `quizaccess` plugin may be needed if supported local-plugin hooks ca
 
 ## Preloading and media delivery
 
-`preload="auto"` is a hint, not a readiness guarantee. Teleport prefers complete download into a browser Blob using Fetch, with progress when a trustworthy content length is available, then loads that Blob into the audio element. The current external origin blocks that cross-origin path, so production uses native buffering with a three-minute readiness cushion. Test authentication/URL lifetime, MIME type, file size, integrity/version, decoder readiness, memory use, and SEB behaviour.
+`preload="auto"` is a hint, not a readiness guarantee. Teleport prefers complete download into a browser Blob using Fetch, with progress when a trustworthy content length is available, then loads that Blob into the audio element. The current external origin blocks that cross-origin path, so production uses native streaming with a 15-second readiness cushion. Test authentication/URL lifetime, MIME type, file size, integrity/version, decoder readiness, memory use, and SEB behaviour.
 
 If cross-origin fetch is unavailable, choose a supported media-origin configuration or delivery location before implementation. Do not proxy the full MP3 through a new PHP endpoint on shared hosting. If only native buffering is possible, describe its weaker guarantees honestly rather than labelling partial buffering as fully ready.
 
@@ -135,7 +135,7 @@ Expected total: **5.5–9.5 engineering days (roughly 44–76 hours)**. A demons
 ## Decisions required before implementation
 
 1. Tune checkpoint intervals and define acceptable conservative replay after lost state; the no-skip recovery policy is confirmed.
-2. Reassess the three-minute buffered-ahead threshold after live candidate and connection testing; complete preload was rejected because it delayed the already-running quiz excessively.
+2. Reassess the 15-second playable cushion after live candidate and connection testing; larger paused-buffer gates were rejected because the browser stopped buffering before reaching them.
 3. Define the invigilator remedy for genuine failures, including whether audio continuation/replay or Moodle time adjustment is permitted and who may authorize it.
 4. Identify target Listening quizzes and actual SEB clients; inspect their current state before selecting integration points.
 

@@ -8,7 +8,7 @@
 define(['core/ajax', 'core/notification', 'media_videojs/video-lazy'], function(Ajax, Notification, VideoJS) {
     const LOCAL_SAVE_INTERVAL_MS = 1000;
     const DURATION_TOLERANCE_MS = 2500;
-    const MIN_BUFFER_AHEAD_SECONDS = 180;
+    const MIN_BUFFER_AHEAD_SECONDS = 15;
 
     const text = {
         loading: 'Loading audio…',
