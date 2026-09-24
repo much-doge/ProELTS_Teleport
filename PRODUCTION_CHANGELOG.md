@@ -84,3 +84,17 @@ The server-side defect is corrected and deployed. A fresh authenticated candidat
 - The superseded 0.1.2 plugin directory is stored outside the web root at `/home/ulbcedxs/.proelts_teleport_backup_20260924_v012`.
 
 The initial page no longer requests the complete recording through the authored Moodle player. A fresh authenticated attempt is still required to measure the candidate-visible page load and time to the three-minute readiness cushion on representative connections.
+
+## 24 September 2026 — Native paused-buffer deadlock correction
+
+- Live testing showed the three-minute readiness indicator stop at 37%. The browser had buffered roughly one minute and then stopped speculative loading while the media remained paused, making the Play gate unreachable.
+- Teleport was disabled immediately. The active-attempt and Teleport-session counts were both zero before code replacement.
+- Teleport 0.1.4 reduces the native-stream gate to a 15-second playable cushion. Loading continues during playback; the gate no longer assumes that a browser will buffer several paused minutes.
+- The cross-origin fallback, delayed VideoJS lifecycle, controlled playback, and completion checkpoint passed in headless Chromium.
+- Release ZIP SHA-256: `2747b6241927b3c868673cbea942c909932f970c353b8a426e032b32f2bcb4ed`.
+- Production AMD asset SHA-256 matched the tested local build: `d099cb9eb730966d58461e97fc6fb141781b139467d85795e4570845344ac68e`.
+- Production PHP lint passed for every packaged PHP file. Moodle upgraded to plugin version `2026092403`, the asset returned HTTP 200, and a second upgrade check reported no upgrade required.
+- Post-activation audit showed enabled state `1`, CMID allowlist `115`, zero active attempts, zero Teleport session rows, two registered AJAX functions, and 40 preserved Cloze tokens.
+- The superseded 0.1.3 plugin directory is stored outside the web root at `/home/ulbcedxs/.proelts_teleport_backup_20260924_v013`.
+
+A fresh page load is required because an already-open attempt retains the previous JavaScript in memory. Candidate-visible verification of the corrected threshold remains pending.
