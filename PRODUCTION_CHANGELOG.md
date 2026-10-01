@@ -98,3 +98,26 @@ The initial page no longer requests the complete recording through the authored 
 - The superseded 0.1.3 plugin directory is stored outside the web root at `/home/ulbcedxs/.proelts_teleport_backup_20260924_v013`.
 
 A fresh page load is required because an already-open attempt retains the previous JavaScript in memory. Candidate-visible verification of the corrected threshold remains pending.
+
+## 2 October 2026 — CMID 118 package activation
+
+- Published the 114NGH Listening package to hidden CMID 118 (quiz instance
+  110) only after confirming zero active attempts and retaining a byte-exact,
+  mode-0600 rollback copy of question 50846 outside the web root.
+- Used Moodle's supported multianswer save path to create ready question version
+  2 (question 50887) in the existing bank entry; ready version 1 remains intact.
+- Verified 40 stored subquestions and correct answers: 20 short-answer and 20
+  multiple-choice, total default mark 40.
+- Preserved global Teleport version `2026092403`, enabled state `1`, selector
+  `.proelts-listening`, checkpoint interval 30 seconds, and existing CMID 115
+  configuration.
+- Activated CMID 118 fail-closed: added media definition
+  `118|114-listening-v001|1773174` first, purged caches, then appended CMID 118
+  to the allowlist last. Final allowlist is `115,118`.
+- Post-activation audit confirmed CMID 118 still hidden, zero active attempts,
+  its latest-version quiz reference, one authored audio element, all 40 stored
+  answers, and the merged Teleport settings.
+
+Server-side activation is verified. No fresh authenticated candidate attempt
+was created in this operation; candidate-flow and Windows SEB verification
+remain pending and the package must not yet be described as exam-ready.
